@@ -92,13 +92,16 @@ namespace Serilog.Sinks.MySQL
                 var tableCommandBuilder = new StringBuilder();
                 tableCommandBuilder.Append($"CREATE TABLE IF NOT EXISTS {_tableName} (");
                 tableCommandBuilder.Append("id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,");
-                tableCommandBuilder.Append("Timestamp VARCHAR(100),");
+                tableCommandBuilder.Append("Timestamp VARCHAR(100) NOT NULL,");
                 tableCommandBuilder.Append("Level VARCHAR(15),");
                 tableCommandBuilder.Append("Template TEXT,");
                 tableCommandBuilder.Append("Message TEXT,");
                 tableCommandBuilder.Append("Exception TEXT,");
                 tableCommandBuilder.Append("Properties TEXT,");
-                tableCommandBuilder.Append("_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+                tableCommandBuilder.Append("_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,");
+                tableCommandBuilder.Append("INDEX (Timestamp DESC),");
+                tableCommandBuilder.Append("INDEX (_ts DESC)");
+                tableCommandBuilder.Append(")");
 
                 var cmd = sqlConnection.CreateCommand();
                 cmd.CommandText = tableCommandBuilder.ToString();
