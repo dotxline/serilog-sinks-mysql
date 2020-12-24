@@ -99,8 +99,7 @@ namespace Serilog.Sinks.MySQL
                 tableCommandBuilder.Append("Exception TEXT,");
                 tableCommandBuilder.Append("Properties TEXT,");
                 tableCommandBuilder.Append("_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,");
-                tableCommandBuilder.Append("INDEX (Timestamp DESC),");
-                tableCommandBuilder.Append("INDEX (_ts DESC)");
+                tableCommandBuilder.Append("INDEX (Timestamp DESC)");
                 tableCommandBuilder.Append(")");
 
                 var cmd = sqlConnection.CreateCommand();
