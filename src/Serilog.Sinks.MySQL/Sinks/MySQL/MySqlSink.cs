@@ -70,18 +70,21 @@ namespace Serilog.Sinks.MySQL
         {
             var tableCommandBuilder = new StringBuilder();
             tableCommandBuilder.Append($"INSERT INTO  {_tableName} (");
-            tableCommandBuilder.Append("Timestamp, Level, Template, Message, Exception, Properties) ");
-            tableCommandBuilder.Append("VALUES (@ts, @level,@template, @msg, @ex, @prop)");
+            tableCommandBuilder.Append("Id, Timestamp, Level, Template, Message, Exception, Properties, AppName, MachineName) ");
+            tableCommandBuilder.Append("VALUES (@id, @ts, @level,@template, @msg, @ex, @prop, @appName, @machineName)");
 
             var cmd = sqlConnection.CreateCommand();
             cmd.CommandText = tableCommandBuilder.ToString();
 
+            cmd.Parameters.Add(new MySqlParameter("@id", MySqlDbType.VarChar));
             cmd.Parameters.Add(new MySqlParameter("@ts", MySqlDbType.VarChar));
             cmd.Parameters.Add(new MySqlParameter("@level", MySqlDbType.VarChar));
             cmd.Parameters.Add(new MySqlParameter("@template", MySqlDbType.VarChar));
             cmd.Parameters.Add(new MySqlParameter("@msg", MySqlDbType.VarChar));
             cmd.Parameters.Add(new MySqlParameter("@ex", MySqlDbType.VarChar));
             cmd.Parameters.Add(new MySqlParameter("@prop", MySqlDbType.VarChar));
+            cmd.Parameters.Add(new MySqlParameter("@appName", MySqlDbType.VarChar));
+            cmd.Parameters.Add(new MySqlParameter("@machineName", MySqlDbType.VarChar));
 
             return cmd;
         }
@@ -91,15 +94,18 @@ namespace Serilog.Sinks.MySQL
             try {
                 var tableCommandBuilder = new StringBuilder();
                 tableCommandBuilder.Append($"CREATE TABLE IF NOT EXISTS {_tableName} (");
-                tableCommandBuilder.Append("id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,");
-                tableCommandBuilder.Append("Timestamp VARCHAR(100) NOT NULL,");
+                tableCommandBuilder.Append("Id CHAR(36) NOT NULL PRIMARY KEY,");
+                tableCommandBuilder.Append("Timestamp DATETIME(6) NOT NULL,");
                 tableCommandBuilder.Append("Level VARCHAR(15),");
                 tableCommandBuilder.Append("Template TEXT,");
                 tableCommandBuilder.Append("Message TEXT,");
                 tableCommandBuilder.Append("Exception TEXT,");
                 tableCommandBuilder.Append("Properties TEXT,");
-                tableCommandBuilder.Append("_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,");
-                tableCommandBuilder.Append("INDEX (Timestamp DESC)");
+                tableCommandBuilder.Append("AppName VARCHAR(256),");
+                tableCommandBuilder.Append("MachineName VARCHAR(256),");
+                tableCommandBuilder.Append("ServerTimestampUtc DATETIME(6) DEFAULT CURRENT_TIMESTAMP,");
+                tableCommandBuilder.Append("INDEX (Timestamp DESC),");
+                tableCommandBuilder.Append("INDEX (Timestamp DESC, AppName, MachineName)");
                 tableCommandBuilder.Append(")");
 
                 var cmd = sqlConnection.CreateCommand();
@@ -127,6 +133,7 @@ namespace Serilog.Sinks.MySQL
                                 ? logEvent.Timestamp.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.fffzzz")
                                 : logEvent.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fffzzz");
 
+                            insertCommand.Parameters["@id"].Value = Guid.NewGuid().ToString();
                             insertCommand.Parameters["@level"].Value     = logEvent.Level.ToString();
                             insertCommand.Parameters["@template"].Value = logEvent.MessageTemplate.ToString();
                             insertCommand.Parameters["@msg"].Value      = logMessageString;
@@ -134,6 +141,8 @@ namespace Serilog.Sinks.MySQL
                             insertCommand.Parameters["@prop"].Value = logEvent.Properties.Count > 0
                                 ? logEvent.Properties.Json()
                                 : string.Empty;
+                            insertCommand.Parameters["@appName"].Value = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
+                            insertCommand.Parameters["@machineName"].Value = Environment.MachineName;
 
                             await insertCommand.ExecuteNonQueryAsync().ConfigureAwait(false);
                         }
